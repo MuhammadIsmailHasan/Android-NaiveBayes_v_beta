@@ -1,5 +1,6 @@
 package com.mind.naivebayesapps;
 
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
@@ -8,11 +9,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -25,40 +28,53 @@ import okhttp3.Response;
 public class MainActivity extends AppCompatActivity{
 
     OkHttpClient client = new OkHttpClient();
+    ProgressDialog progressDialog;
 
     EditText fitur1, fitur2, fitur3;
     Button btnSub;
     Button btnKelompok;
 
-    public String url = "http://54.165.2.188:8001/api/naive";
+    private static final String url = "http://54.204.185.51:8001/api/naive";
 
     String fitur_1, fitur_2, fitur_3;
-
-    private static final String TAG = "prediksi";
-
     String mMessage;
     String hasilPredic;
-    //    TextView hasil;
+
+    private static final String TAG = "prediksi";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        fitur1 = (EditText) findViewById(R.id.fitur_1);
-        fitur2 = (EditText) findViewById(R.id.fitur_2);
-        fitur3 = (EditText) findViewById(R.id.fitur_3);
+        fitur1 = findViewById(R.id.fitur_1);
+        fitur2 = findViewById(R.id.fitur_2);
+        fitur3 = findViewById(R.id.fitur_3);
 
         btnSub= (Button) findViewById(R.id.btnSubmit);
         btnKelompok= (Button) findViewById(R.id.btnKelompok);
 
-        fitur_1 = fitur1.getText().toString();
-        fitur_2 = fitur2.getText().toString();
-        fitur_3 = fitur3.getText().toString();
-
         btnSub.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                fitur_1 = fitur1.getText().toString();
+                fitur_2 = fitur2.getText().toString();
+                fitur_3 = fitur3.getText().toString();
+
+                // progress dialog
+                progressDialog = new ProgressDialog(view.getContext());
+                progressDialog.setMessage("Loading..."); // Setting Message
+                progressDialog.setProgressStyle(ProgressDialog.STYLE_SPINNER); // Progress Dialog Style Spinner
+                progressDialog.show(); // Display Progress Dialog
+                progressDialog.setCancelable(false);
+
+                OkHttpClient.Builder builder = new OkHttpClient.Builder();
+                builder.connectTimeout(5, TimeUnit.MINUTES) // connect timeout
+                        .writeTimeout(5, TimeUnit.MINUTES) // write timeout
+                        .readTimeout(5, TimeUnit.MINUTES); // read timeout
+
+                client = builder.build();
+
                 try {
                     postRequest();
                 } catch (IOException e) {
@@ -76,6 +92,7 @@ public class MainActivity extends AppCompatActivity{
     }
 
     private void postRequest() throws IOException {
+
 
         MediaType MEDIA_TYPE = MediaType.parse("application/json");
 
@@ -98,23 +115,31 @@ public class MainActivity extends AppCompatActivity{
                 .build();
 
         client.newCall(request).enqueue(new Callback() {
+
             @Override
             public void onFailure(Call call, IOException e) {
-                String mMessage = e.getMessage().toString();
-                hasilPredic = mMessage.toString();
-                alertDialog();
-                Log.w("failure Response", mMessage);
+                System.out.println("no");
+                String mMessage = e.getMessage();
+                // hasilPredic = mMessage.toString();
+                // alertDialog();
+                Log.w("failure Response", e);
 //                call.cancel();
+
+                //Dismiss the dialog
+                progressDialog.dismiss();
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-
                 mMessage = response.body().string();
+                System.out.println("ok");
                 MainActivity.this.runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         try {
+                            //Dismiss the dialog
+                            progressDialog.dismiss();
+
                             JSONObject json = new JSONObject(mMessage);
                             hasilPredic = json.getString("prediksi");
                         } catch (JSONException e) {
@@ -146,7 +171,7 @@ public class MainActivity extends AppCompatActivity{
         AlertDialog.Builder Peringatan = new AlertDialog.Builder(this);
         Peringatan.setTitle("Daftar Nama Kelompok");
         Peringatan
-                .setMessage("1. Muhammad Ismail Hasan \n2. Afwan Ghofur \n3. Mickael Alexander")
+                .setMessage("1. Afwan Ghofur \n2. Mikhael Alexander \n3. Muhammad Ismail Hasan")
                 .setCancelable(false)
                 .setPositiveButton("Ok", new DialogInterface.OnClickListener() {
                     @Override
